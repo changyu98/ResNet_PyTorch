@@ -237,7 +237,6 @@ def main_worker(gpu, ngpus_per_node, args):
         transform=transforms.Compose([
             transforms.Resize(36),
             transforms.RandomCrop(32),
-            transforms.RandomRotation(degrees=15),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
@@ -249,7 +248,7 @@ def main_worker(gpu, ngpus_per_node, args):
         train_sampler = None
 
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+        train_dataset, batch_size=args.batch_size, shuffle=True,
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
 
     test_dataset = datasets.CIFAR10(
