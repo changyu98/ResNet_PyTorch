@@ -417,7 +417,7 @@ def main_worker(gpu, ngpus_per_node, args):
         with open("res.txt", "w") as f:
             print(f"Acc@1: {res}", file=f)
         return
-    print(model)
+
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
