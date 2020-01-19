@@ -24,5 +24,10 @@ python main.py data -a resnet20 --gpu 0
 python main.py data -a resnet20 --gpu 0 -e
 ```
 
+### download pre-trained weights
 
-
+- [resnet20.pth](https://raw.githubusercontent.com/Lornatang/ResNet/master/examples/cifar/checkpoint/resnet20.pth)
+- [resnet32.pth](https://raw.githubusercontent.com/Lornatang/ResNet/master/examples/cifar/checkpoint/resnet32.pth)
+- [resnet44.pth](https://raw.githubusercontent.com/Lornatang/ResNet/master/examples/cifar/checkpoint/resnet44.pth)
+- [resnet56.pth](https://raw.githubusercontent.com/Lornatang/ResNet/master/examples/cifar/checkpoint/resnet56.pth)
+- [resnet110.pth](https://raw.githubusercontent.com/Lornatang/ResNet/master/examples/cifar/checkpoint/resnet110.pth)
