@@ -67,6 +67,7 @@ Details about the models are below:
 |     `vgg16_bn`    |  138.4M  |    93.9    |      √      |
 |     `vgg19_bn`    |  143.7M  |    93.7    |      √      |
 
+For results extending to the cifar10 dataset, see `examples/cifar`
 
 #### Example: Classification
 

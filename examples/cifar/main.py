@@ -44,8 +44,6 @@ from apex import amp
 parser = argparse.ArgumentParser(description="PyTorch ImageNet Training")
 parser.add_argument("data", metavar="DIR", default="data",
                     help="path to dataset")
-parser.add_argument("--name", default="cifar10", type=str,
-                    help="use cifar10 / cifar100 dataset (default: cifar10)")
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet20',
                     help='model architecture (default: resnet20)')
 parser.add_argument("-j", "--workers", default=0, type=int, metavar="N",
@@ -165,7 +163,7 @@ class ResNet(nn.Module):
         self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
-
+        
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(64, num_classes)
 
@@ -322,10 +320,6 @@ def main_worker(gpu, ngpus_per_node, args):
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
 
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
-                                                        milestones=[100, 150],
-                                                        last_epoch=args.start_epoch - 1)
-
     if args.arch in ["resnet110", "resnet1202"]:
         # for resnet1202 original paper uses lr=0.01 for first 400 minibatches for warm-up
         # then switch back. In this setup it will correspond for first epoch.
@@ -350,54 +344,31 @@ def main_worker(gpu, ngpus_per_node, args):
             print(f"=> loaded checkpoint {args.resume} (epoch {checkpoint['epoch']})")
         else:
             print(f"=> no checkpoint found at `{args.resume}`")
-
+   
     cudnn.benchmark = True
 
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
-
-    if args.name == "cifar10":
-        train_dataset = datasets.CIFAR10(
-            root=args.data,
-            train=True,
-            download=True,
-            transform=transforms.Compose([
-                transforms.RandomCrop(32, padding=4),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-            ]))
-        test_dataset = datasets.CIFAR10(
-            root=args.data,
-            train=False,
-            download=True,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                normalize,
-            ]))
-    elif args.name == "cifar100":
-        train_dataset = datasets.CIFAR100(
-            root=args.data,
-            train=True,
-            download=True,
-            transform=transforms.Compose([
-                transforms.RandomCrop(32, padding=4),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-            ]))
-        test_dataset = datasets.CIFAR100(
-            root=args.data,
-            train=False,
-            download=True,
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                normalize,
-            ]))
-    else:
-        print("Please run `python main.py --help`")
-        return
+    
+    train_dataset = datasets.CIFAR10(
+        root=args.data,
+        train=True,
+        download=True,
+        transform=transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ]))
+    test_dataset = datasets.CIFAR10(
+        root=args.data,
+        train=False,
+        download=True,
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+            normalize,
+        ]))
 
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -421,12 +392,10 @@ def main_worker(gpu, ngpus_per_node, args):
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
+        adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch, args)
-
-        # When training epoch reach milestones, initial vector multiplied by gamma get new vector
-        lr_scheduler.step()
 
         # evaluate on validation set
         acc1 = validate(test_loader, model, criterion, args)
@@ -538,6 +507,17 @@ def save_checkpoint(state, is_best, filename="checkpoint.pth"):
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, "model_best.pth")
+
+
+def adjust_learning_rate(optimizer, epoch, args):
+    """Sets the learning rate to the initial LR decayed by 10 every specified epochs"""
+    if epoch + 1 == 100:
+        lr = args.lr * 0.1
+    elif epoch + 1 == 150:
+        lr = args.lr * 0.01
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
 
 
 class AverageMeter(object):
