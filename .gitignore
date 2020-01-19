@@ -127,8 +127,6 @@ examples/imagenet/data/test
 # Mac file
 .DS_Store
 
-# Model file
-*.pth
 
 # API file
 static/
