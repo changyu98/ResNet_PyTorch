@@ -139,6 +139,8 @@ class BasicBlock(nn.Module):
                 )
 
     def forward(self, x):
+        identify = x
+
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
@@ -146,7 +148,7 @@ class BasicBlock(nn.Module):
         out = self.conv2(out)
         out = self.bn2(out)
 
-        out += self.shortcut(x)
+        out += self.shortcut(identify)
         out = self.relu(out)
         return out
 
@@ -163,7 +165,7 @@ class ResNet(nn.Module):
         self.layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
-        
+
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(64, num_classes)
 
@@ -179,19 +181,19 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(outx)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
 
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.fc(x)
+        out = self.avgpool(out)
+        out = torch.flatten(out, 1)
+        out = self.fc(out)
 
-        return x
+        return out
 
 
 def resnet20():
@@ -338,13 +340,13 @@ def main_worker(gpu, ngpus_per_node, args):
             print(f"=> loaded checkpoint {args.resume} (epoch {checkpoint['epoch']})")
         else:
             print(f"=> no checkpoint found at `{args.resume}`")
-   
+
     cudnn.benchmark = True
 
     # Data loading code
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
-    
+
     train_dataset = datasets.CIFAR10(
         root=args.data,
         train=True,
@@ -490,7 +492,6 @@ def validate(test_loader, model, criterion, args):
             if i % args.print_freq == 0:
                 progress.print(i)
 
-        # TODO: this should also be done with the ProgressMeter
         print(" * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}"
               .format(top1=top1, top5=top5))
 
