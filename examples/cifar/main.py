@@ -183,7 +183,7 @@ class ResNet(nn.Module):
     def forward(self, x):
         out = self.conv1(x)
         out = self.bn1(out)
-        out = self.relu(outx)
+        out = self.relu(out)
 
         out = self.layer1(out)
         out = self.layer2(out)
