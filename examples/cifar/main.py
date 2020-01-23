@@ -282,7 +282,7 @@ def main_worker(gpu, ngpus_per_node, args):
     elif args.arch == "resnet1202":
         model = resnet1202()
     else:
-        warnings.WarningMessage("please run `python cifar10.py --help`.")
+        warnings.WarningMessage("please run `python main.py --help`.")
 
     if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
@@ -319,12 +319,6 @@ def main_worker(gpu, ngpus_per_node, args):
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
-
-    if args.arch in ["resnet110", "resnet1202"]:
-        # for resnet1202 original paper uses lr=0.01 for first 400 minibatches for warm-up
-        # then switch back. In this setup it will correspond for first epoch.
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = args.lr * 0.1
 
     model, optimizer = amp.initialize(model, optimizer, opt_level=args.opt_level)
 
@@ -511,13 +505,13 @@ def save_checkpoint(state, is_best, filename="checkpoint.pth"):
 
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every specified epochs"""
-    if epoch + 1 == 100:
-        lr = args.lr * 0.1
-    elif epoch + 1 == 150:
-        lr = args.lr * 0.01
+    lr = args.lr
+    if epoch + 1 >= 100 and epoch + 1 < 150:
+        lr = lr * 0.1
+    elif epoch + 1 >= 150:
+        lr = lr * 0.01
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
-
 
 
 class AverageMeter(object):
