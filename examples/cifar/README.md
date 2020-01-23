@@ -21,7 +21,7 @@ python main.py data -a resnet20 --gpu 0
 
 ### Test
 ```text
-python main.py data -a resnet20 --gpu 0 -e
+python main.py data -a resnet20 --gpu 0 -e --resume model_best.pth
 ```
 
 ### download pre-trained weights
