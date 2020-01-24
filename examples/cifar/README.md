@@ -6,7 +6,7 @@ Details about the models are below:
 
 |     *Method*      |*# Params*|*Error (paper).*|*Error (ours).*|
 |:-----------------:|:--------:|:--------------:|:-------------:|
-|    `resnet20`     |  0.27M   |    8.75%       |     8.27%     |
+|    `resnet20`     |  0.27M   |    8.75%       |     8.02%     |
 |    `resnet32`     |  0.46M   |    7.51%       |     7.35%     |
 |    `resnet44`     |  0.66M   |    7.17%       |     6.70%     |
 |    `resnet56`     |  0.85M   |    6.97%       |     6.60%     |
