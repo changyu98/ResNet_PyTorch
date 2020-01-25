@@ -19,7 +19,7 @@ Details about the models are below:
 python main.py data -a resnet20 --gpu 0 
 ```
 
-### Test
+### Evaluate
 ```text
 python main.py data -a resnet20 --gpu 0 -e --resume model_best.pth
 ```
