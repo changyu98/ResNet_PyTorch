@@ -15,4 +15,6 @@
 __version__ = "0.1.0"
 
 from .model import ResNet
+from .model_test import ResNet_c10
 from .utils import load_pretrained_weights
+from .utils_test import load_pretrained_weights
