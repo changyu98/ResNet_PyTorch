@@ -79,13 +79,13 @@ from PIL import Image
 import torch
 from torchvision import transforms
 
-from vgg import ResNet
+from resnet import ResNet
 model = ResNet.from_pretrained("resnet18")
 
 # Preprocess image
 tfms = transforms.Compose([transforms.Resize(224), transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),])
-img = tfms(Image.open('img.jpg')).unsqueeze(0)
+img = tfms(Image.open('img2.jpg')).unsqueeze(0)
 print(img.shape) # torch.Size([1, 3, 224, 224])
 
 # Load ImageNet class names
