@@ -12,7 +12,7 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = 'vggnet'
+NAME = 'resnet'
 DESCRIPTION = 'An ResNet implements of PyTorch.'
 URL = 'https://github.com/lornatang/ResNet'
 EMAIL = 'liuchangyu1111@gmail.com'
