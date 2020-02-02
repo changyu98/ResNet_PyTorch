@@ -22,6 +22,7 @@ import os
 import random
 import shutil
 import time
+import hashlib
 import warnings
 import PIL
 
@@ -40,14 +41,15 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 
 from apex import amp
+from resnet import ResNet_c10
 
 parser = argparse.ArgumentParser(description="PyTorch ImageNet Training")
 parser.add_argument("data", metavar="DIR", default="data",
                     help="path to dataset")
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet20',
                     help='model architecture (default: resnet20)')
-parser.add_argument("-j", "--workers", default=0, type=int, metavar="N",
-                    help="number of data loading workers (default: 0)")
+parser.add_argument("-j", "--workers", default=1, type=int, metavar="N",
+                    help="number of data loading workers (default: 1)")
 parser.add_argument("--epochs", default=200, type=int, metavar="N",
                     help="number of total epochs to run")
 parser.add_argument("--start-epoch", default=0, type=int, metavar="N",
@@ -93,10 +95,11 @@ parser.add_argument("--multiprocessing-distributed", action="store_true",
                          "multi node data parallel training")
 
 best_acc1 = 0
-args = parser.parse_args()
 
 
 def main():
+    args = parser.parse_args()
+
     if args.seed is not None:
         random.seed(args.seed)
         torch.manual_seed(args.seed)
@@ -146,21 +149,15 @@ def main_worker(gpu, ngpus_per_node, args):
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                 world_size=args.world_size, rank=args.rank)
     # create model
-    print(f"=> creating model `{args.arch}`")
-    if args.arch == "resnet20":
-        model = resnet20()
-    elif args.arch == "resnet32":
-        model = resnet32()
-    elif args.arch == "resnet44":
-        model = resnet44()
-    elif args.arch == "resnet56":
-        model = resnet56()
-    elif args.arch == "resnet110":
-        model = resnet110()
-    elif args.arch == "resnet1202":
-        model = resnet1202()
+    if 'resnet' in args.arch:  # NEW
+        if args.pretrained:
+            model = ResNet_c10.from_pretrained(args.arch)
+            print(f"=> using pre-trained model '{args.arch}'")
+        else:
+            print(f"=> creating model '{args.arch}'")
+            model = ResNet_c10.from_name(args.arch)
     else:
-        warnings.WarningMessage("please run `python main.py --help`.")
+        warnings.warn("Plesase run `python main.py --help`.")
 
     if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
@@ -205,6 +202,7 @@ def main_worker(gpu, ngpus_per_node, args):
         if os.path.isfile(args.resume):
             print(f"=> loading checkpoint `{args.resume}`")
             checkpoint = torch.load(args.resume)
+            compress_model(checkpoint, filename=args.resume)
             args.start_epoch = checkpoint["epoch"]
             best_acc1 = checkpoint["best_acc1"]
             if args.gpu is not None:
@@ -448,6 +446,32 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
+
+
+def cal_file_md5(filename):
+    """ Calculates the MD5 value of the file
+    Args:
+        filename: The path name of the file.
+
+    Return:
+        The MD5 value of the file.
+
+    """
+    with open(filename, "rb") as f:
+        md5 = hashlib.md5()
+        md5.update(f.read())
+        hash_value = md5.hexdigest()
+    return hash_value
+
+
+def compress_model(state, filename):
+    model_folder = "../checkpoints"
+    try:
+        os.makedirs(model_folder)
+    except OSError:
+        pass
+    new_filename = filename[:-4] + "-" + cal_file_md5(filename)[:8] + ".pth"
+    torch.save(state["state_dict"], os.path.join(model_folder, new_filename))
 
 
 if __name__ == "__main__":
