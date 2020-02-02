@@ -1,5 +1,9 @@
 # ResNet
 
+### Update (February 2, 2020)
+
+This update allows you to use NVIDIA's Apex tool for accelerated training. By default choice `hybrid training precision` + `dynamic loss amplified` version, if you need to learn more and details about `apex` tools, please visit https://github.com/NVIDIA/apex.
+
 ### Overview
 This repository contains an op-for-op PyTorch reimplementation of [ResNet](https://arxiv.org/pdf/1512.03385.pdf).
 
@@ -55,17 +59,15 @@ model = ResNet.from_pretrained("resnet18")
 
 Details about the models are below: 
 
-|      *Name*       |*# Params*|*Top-1 Acc.*|*Pretrained?*|
-|:-----------------:|:--------:|:----------:|:-----------:|
-|     `vgg11`       |  132.9M  |    91.1    |      √      |
-|     `vgg13`       |   133M   |    92.8    |      √      |
-|     `vgg16`       |  138.4M  |    92.6    |      √      |
-|     `vgg19`       |  143.7M  |    92.3    |      √      |
-|-------------------|----------|------------|-------------|
-|     `vgg11_bn`    |  132.9M  |    92.2    |      √      |
-|     `vgg13_bn`    |   133M   |    94.2    |      √      |
-|     `vgg16_bn`    |  138.4M  |    93.9    |      √      |
-|     `vgg19_bn`    |  143.7M  |    93.7    |      √      |
+|  *Method*  |*#Params*|   *top-1 err*   |   *top-5 err*   |*Pretrained?*|
+|:-----------|:-------:|:---------------:|:---------------:|:-----------:|
+|`resnet18`  |  11.7M  |      27.88      |       —         |      √      |
+|`resnet34`  |  21.8M  |24.52(24.61±0.42)| 7.46(7.58±0.18) |      √      |
+|`resnet50`  |  25.6M  |      22.85      |      6.71       |      √      |
+|`resnet101` |  44.6M  |      21.75      |      6.05       |      √      |
+|`resnet156` |  60.2M  |      21.43      |      5.71       |      √      |
+
+*Option B of resnet-18/34/50/101/152 only uses projections to increase dimensions.*
 
 For results extending to the cifar10 dataset, see `examples/cifar`
 
@@ -75,33 +77,47 @@ We assume that in your current directory, there is a `img.jpg` file and a `label
 
 ```python
 import json
-from PIL import Image
+import urllib
+
 import torch
-from torchvision import transforms
+import torchvision.transforms as transforms
+from PIL import Image
 
 from resnet import ResNet
-model = ResNet.from_pretrained("resnet18")
+
+input_image = Image.open("img.jpg")
 
 # Preprocess image
-tfms = transforms.Compose([transforms.Resize(224), transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),])
-img = tfms(Image.open('img2.jpg')).unsqueeze(0)
-print(img.shape) # torch.Size([1, 3, 224, 224])
+preprocess = transforms.Compose([
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+input_tensor = preprocess(input_image)
+input_batch = input_tensor.unsqueeze(0)  # create a mini-batch as expected by the model
 
-# Load ImageNet class names
-labels_map = json.load(open('labels_map.txt'))
+labels_map = json.load(open("labels_map.txt"))
 labels_map = [labels_map[str(i)] for i in range(1000)]
 
-# Classify
+# Classify with ResNet
+model = ResNet.from_pretrained("resnet18")
 model.eval()
-with torch.no_grad():
-    outputs = model(img)
 
-# Print predictions
-print('-----')
-for idx in torch.topk(outputs, k=5).indices.squeeze(0).tolist():
-    prob = torch.softmax(outputs, dim=1)[0, idx].item()
-    print('{label:<75} ({p:.2f}%)'.format(label=labels_map[idx], p=prob*100))
+# move the input and model to GPU for speed if available
+if torch.cuda.is_available():
+    input_batch = input_batch.to("cuda")
+    model.to("cuda")
+
+with torch.no_grad():
+    output = model(input_batch)
+preds = torch.topk(output, k=5).indices.squeeze(0).tolist()
+
+print("-----")
+for idx in preds:
+    label = labels_map[idx]
+    prob = torch.softmax(output, dim=1)[0, idx].item()
+    print("{:<75} ({:.2f}%)".format(label, prob * 100))
 ```
 
 #### ImageNet
