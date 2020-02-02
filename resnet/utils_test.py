@@ -90,7 +90,7 @@ def get_model_params(model_name, override_params):
     return blocks_args, global_params
 
 
-urls_map = {
+url_map = {
     "resnet20": "https://github.com/Lornatang/models/raw/master/resnet/resnet20-546fab9e.pth",
     "resnet32": "https://github.com/Lornatang/models/raw/master/resnet/resnet32-b9948351.pth",
     "resnet44": "https://github.com/Lornatang/models/raw/master/resnet/resnet44-f74dd615.pth",
@@ -101,7 +101,7 @@ urls_map = {
 
 def load_pretrained_weights(model, model_name, load_fc=True):
     """ Loads pretrained weights, and downloads if loading for the first time. """
-    state_dict = model_zoo.load_url(url_map_[model_name])
+    state_dict = model_zoo.load_url(url_map[model_name])
     if load_fc:
         model.load_state_dict(state_dict)
     else:

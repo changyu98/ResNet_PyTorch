@@ -4,14 +4,14 @@ The official implementation of ImageNet is included, but the parameters of this 
 
 Details about the models are below: 
 
-|     *Method*      |*# Params*|*Error (paper).*|*Error (ours).*|
-|:-----------------:|:--------:|:--------------:|:-------------:|
-|    `resnet20`     |  0.27M   |    8.75%       |     8.02%     |
-|    `resnet32`     |  0.46M   |    7.51%       |     7.35%     |
-|    `resnet44`     |  0.66M   |    7.17%       |     6.70%     |
-|    `resnet56`     |  0.85M   |    6.97%       |     6.60%     |
-|    `resnet110`    |   1.7M   |6.43%(6.61±0.16)|     6.26%     |
-|    `resnet1202`   |  19.4M   |    7.93%       |       ——      |
+|     *Method*      |*# Params*|*Error (paper).*|*Error (ours).*|*Pretrained?*|
+|:-----------------:|:--------:|:--------------:|:-------------:|:-----------:|
+|    `resnet20`     |  0.27M   |    8.75%       |     8.02%     |      ×      |
+|    `resnet32`     |  0.46M   |    7.51%       |     7.35%     |      ×      |
+|    `resnet44`     |  0.66M   |    7.17%       |     6.70%     |      ×      |
+|    `resnet56`     |  0.85M   |    6.97%       |     6.60%     |      ×      |
+|    `resnet110`    |   1.7M   |6.43%(6.61±0.16)|     6.26%     |      ×      |
+|    `resnet1202`   |  19.4M   |    7.93%       |       ——      |      ×      |
  
 
 ### Train

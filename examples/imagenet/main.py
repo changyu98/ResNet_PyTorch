@@ -43,24 +43,24 @@ from resnet import ResNet
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('data', metavar='DIR', default='data',
                     help='path to dataset')
-parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet20',
-                    help='model architecture (default: resnet20)')
-parser.add_argument('-j', '--workers', default=1, type=int, metavar='N',
-                    help='number of data loading workers (default: 1)')
+parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
+                    help='model architecture. default: ``resnet18``.')
+parser.add_argument('-j', '--workers', default=0, type=int, metavar='N',
+                    help='number of data loading workers. default: ``0``.')
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=128, type=int,
+parser.add_argument('-b', '--batch-size', default=256, type=int,
                     metavar='N',
-                    help='mini-batch size (default: 128), this is the total '
+                    help='mini-batch size (default: 256), this is the total '
                          'batch size of all GPUs on the current node when '
                          'using Data Parallel or Distributed Data Parallel')
-parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
+parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
-parser.add_argument('--wd', '--weight-decay', default=5e-4, type=float,
+parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)',
                     dest='weight_decay')
 parser.add_argument('-p', '--print-freq', default=10, type=int,
@@ -85,8 +85,6 @@ parser.add_argument('--seed', default=None, type=int,
                     help='seed for initializing training. ')
 parser.add_argument('--gpu', default=0, type=int,
                     help='GPU id to use.')
-parser.add_argument('--num_classes', type=int, default=1000,
-                    help="number of dataset category.")
 parser.add_argument('--multiprocessing-distributed', action='store_true',
                     help='Use multi-processing distributed training to launch '
                          'N processes per node, which has N GPUs. This is the '
@@ -135,7 +133,7 @@ def main_worker(gpu, ngpus_per_node, args):
     args.gpu = gpu
 
     if args.gpu is not None:
-        print(f"Use GPU: {args.gpu} for training!")
+        print("Use GPU: {} for training!".format(args.gpu))
 
     if args.distributed:
         if args.dist_url == "env://" and args.rank == -1:
@@ -149,13 +147,18 @@ def main_worker(gpu, ngpus_per_node, args):
     # create model
     if 'resnet' in args.arch:  # NEW
         if args.pretrained:
-            model = ResNet.from_pretrained(args.arch, args.num_classes)
-            print(f"=> using pre-trained model '{args.arch}'")
+            model = ResNet.from_pretrained(args.arch)
+            print("=> using pre-trained model '{}'.".format(args.arch))
         else:
-            print(f"=> creating model '{args.arch}'")
+            print("=> creating model '{}'.".format(args.arch))
             model = ResNet.from_name(args.arch)
     else:
-        warnings.warn("Plesase --arch resnet.")
+        if args.pretrained:
+            print("=> using pre-trained model '{}'".format(args.arch))
+            model = ResNet.__dict__[args.arch](pretrained=True)
+        else:
+            print("=> creating model '{}'".format(args.arch))
+            model = ResNet.__dict__[args.arch]()
 
     if args.distributed:
         # For multiprocessing distributed, DistributedDataParallel constructor
@@ -200,7 +203,7 @@ def main_worker(gpu, ngpus_per_node, args):
     # optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
-            print(f"=> loading checkpoint '{args.resume}'")
+            print("=> loading checkpoint '{}'.".format(args.resume))
             checkpoint = torch.load(args.resume)
             compress_model(checkpoint, filename=args.resume)
             args.start_epoch = checkpoint['epoch']
@@ -211,9 +214,10 @@ def main_worker(gpu, ngpus_per_node, args):
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             amp.load_state_dict(checkpoint['amp'])
-            print(f"=> loaded checkpoint '{args.resume}' (epoch {checkpoint['epoch']})")
+            print("=> loaded checkpoint '{}' (epoch {})"
+                  .format(args.resume, checkpoint['epoch']))
         else:
-            print(f"=> no checkpoint found at '{args.resume}'")
+            print("=> no checkpoint found at '{}'".format(args.resume))
 
     cudnn.benchmark = True
 
@@ -240,34 +244,19 @@ def main_worker(gpu, ngpus_per_node, args):
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
-
-    if 'resnet' in args.arch:
-        image_size = ResNet.get_image_size(args.arch)
-        val_transforms = transforms.Compose([
-            transforms.Resize(image_size, interpolation=PIL.Image.BICUBIC),
-            transforms.CenterCrop(image_size),
-            transforms.ToTensor(),
-            normalize,
-        ])
-        print('Using image size', image_size)
-    else:
-        val_transforms = transforms.Compose([
+    
+    val_loader = torch.utils.data.DataLoader(
+        datasets.ImageFolder(valdir, transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             normalize,
-        ])
-        print('Using image size', 224)
-
-    val_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(valdir, val_transforms),
+        ])),
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
 
     if args.evaluate:
-        top1 = validate(val_loader, model, criterion, args)
-        with open('res.txt', 'w') as f:
-            print(f"Acc@1: {top1}", file=f)
+        validate(val_loader, model, criterion, args)
         return
 
     for epoch in range(args.start_epoch, args.epochs):
@@ -300,11 +289,13 @@ def main_worker(gpu, ngpus_per_node, args):
 def train(train_loader, model, criterion, optimizer, epoch, args):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
-    losses = AverageMeter('Loss', ':4.4f')
+    losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(len(train_loader), batch_time, data_time, losses, top1,
-                             top5, prefix="Epoch: [{}]".format(epoch))
+    progress = ProgressMeter(
+        len(train_loader),
+        [batch_time, data_time, losses, top1, top5],
+        prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
     model.train()
@@ -339,16 +330,18 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         end = time.time()
 
         if i % args.print_freq == 0:
-            progress.print(i)
+            progress.display(i)
 
 
 def validate(val_loader, model, criterion, args):
     batch_time = AverageMeter('Time', ':6.3f')
-    losses = AverageMeter('Loss', ':4.4f')
+    losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
     top5 = AverageMeter('Acc@5', ':6.2f')
-    progress = ProgressMeter(len(val_loader), batch_time, losses, top1, top5,
-                             prefix='Test: ')
+    progress = ProgressMeter(
+        len(val_loader),
+        [batch_time, losses, top1, top5],
+        prefix='Test: ')
 
     # switch to evaluate mode
     model.eval()
@@ -375,23 +368,23 @@ def validate(val_loader, model, criterion, args):
             end = time.time()
 
             if i % args.print_freq == 0:
-                progress.print(i)
+                progress.display(i)
 
+        # TODO: this should also be done with the ProgressMeter
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
 
     return top1.avg
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth'):
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, "model_best.pth")
+        shutil.copyfile(filename, "model_best.pth.tar")
 
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
-
     def __init__(self, name, fmt=':f'):
         self.name = name
         self.fmt = fmt
@@ -415,18 +408,17 @@ class AverageMeter(object):
 
 
 class ProgressMeter(object):
-    def __init__(self, num_batches, *meters, prefix=""):
+    def __init__(self, num_batches, meters, prefix=""):
         self.batch_fmtstr = self._get_batch_fmtstr(num_batches)
         self.meters = meters
         self.prefix = prefix
 
-    def print(self, batch):
+    def display(self, batch):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
         entries += [str(meter) for meter in self.meters]
         print('\t'.join(entries))
 
-    @staticmethod
-    def _get_batch_fmtstr(num_batches):
+    def _get_batch_fmtstr(self, num_batches):
         num_digits = len(str(num_batches // 1))
         fmt = '{:' + str(num_digits) + 'd}'
         return '[' + fmt + '/' + fmt.format(num_batches) + ']'

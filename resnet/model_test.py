@@ -4,7 +4,7 @@ from torch.nn import functional as F
 
 from .utils_test import get_model_params
 from .utils_test import resnet_params
-from .utils import load_pretrained_weights
+from .utils_test import load_pretrained_weights
 
 
 class IdentityLayer(nn.Module):
@@ -76,7 +76,7 @@ class ResNet_c10(nn.Module):
         self.fc = nn.Linear(64, self._global_params.num_classes)
 
         for m in self.modules():
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
                 nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
@@ -121,7 +121,7 @@ class ResNet_c10(nn.Module):
     @classmethod
     def get_image_size(cls, model_name):
         cls._check_model_name_is_valid(model_name)
-        _, res = resnet_params(model_name)
+        res, _ = resnet_params(model_name)
         return res
 
     @classmethod
